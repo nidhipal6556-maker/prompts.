@@ -1,0 +1,672 @@
+import React, { useState, useRef } from 'react';
+import { Copy, Check, Sparkles, GraduationCap, X, Loader2, Volume2, VolumeX, Wand2 } from 'lucide-react';
+
+// Content from the provided markdown
+const PAGE_CONTENT = {
+  title: "the 10 claude prompts",
+  subtitle: "every student should know.",
+  description: "Most \"AI prompts\" lists are generic junk — \"write me an essay,\" \"summarize this.\" Useless. If you're a student, the real value of Claude isn't writing your assignment for you. It's using it like a personal tutor who never gets tired of your dumb questions at 1 AM before an exam.",
+  bottomLine: "The best prompts don't ask Claude to do your work — they ask it to make you think harder, faster, or more clearly than you would alone. Try rewording one of these for whatever you're stuck on right now.",
+  prompts: [
+    {
+      id: 1,
+      title: "The \"Explain Like I'm Actually Confused\" Prompt",
+      prompt: "Explain [topic] to me like I'm a complete beginner who's about to fail their exam tomorrow. Assume I know nothing going in. Start with one real-life analogy that makes the core idea click, then break the technical version into small numbered steps. After that, give me one simple example problem solved step-by-step, and end with 3 common mistakes students make with this topic so I don't repeat them.",
+      explanation: "Why it works: most textbooks explain things assuming you already get it. This prompt forces a ground-up explanation, locks it in with an analogy, proves it with a worked example, and inoculates you against the exact mistakes that cost marks.",
+      color: "bg-[#ffd6e0]", 
+      accent: "text-pink-900"
+    },
+    {
+      id: 2,
+      title: "The PYQ Pattern-Finder",
+      prompt: "Here are the last 5 years of previous year questions for [subject/unit] — I'll paste or upload them. Go through all of them and group similar questions together. Tell me: (1) which 3-5 topics show up almost every single year, (2) which topics show up only occasionally and are lower priority, (3) which exact questions have repeated word-for-word or with minor changes, and (4) based on this pattern, what topics you'd bet on appearing this year.",
+      explanation: "Instead of randomly revising everything with equal effort, you revise what's statistically likely to show up first. Exams repeat patterns more than people realize. This prompt turns scattered PYQ papers into an actual battle plan.",
+      color: "bg-[#bde0fe]", 
+      accent: "text-blue-900"
+    },
+    {
+      id: 3,
+      title: "The Concept-to-Diagram Prompt",
+      prompt: "Explain [concept] in detail, and then walk me through exactly how to draw/sketch a diagram of it for my exam answer — step by step, in the order I should draw things. Tell me what labels are mandatory (the ones that carry marks), what proportions or angles matter, what's commonly drawn wrong, and how to make it look clean and clear in under 2-3 minutes during an exam.",
+      explanation: "Great for engineering, biology, and science subjects where diagrams carry separate marks. Claude can't draw for you, but it can act like a senior who's already given this exam and tell you exactly what to sketch, in what order.",
+      color: "bg-[#d8f3dc]", 
+      accent: "text-green-900"
+    },
+    {
+      id: 4,
+      title: "The \"Quiz Me, Don't Just Tell Me\" Prompt",
+      prompt: "Quiz me on [topic] with 10 questions, mixing easy, medium, and hard difficulty. Give me one question at a time and wait for my answer — don't show the next question until I respond. If I get it wrong, don't just give the correct answer; explain *why* it's wrong, where my thinking broke down, and then re-ask a similar question later in the quiz to see if I actually learned it.",
+      explanation: "Passive reading doesn't build memory — active recall does. This prompt turns Claude into an adaptive quiz partner that finds your weak spots and actually re-tests them instead of letting you feel falsely confident.",
+      color: "bg-[#fcf6bd]", 
+      accent: "text-yellow-900"
+    },
+    {
+      id: 5,
+      title: "The Deadline Reality-Check Prompt",
+      prompt: "I have [X hours/days] before my exam on [subject] and I genuinely haven't started preparing. Here's the full syllabus / unit list: [paste it]. Be brutally realistic, not idealistic — give me a ranked plan of what to study first, what to skip entirely if I run out of time, and what gives me the most marks for the least effort.",
+      explanation: "This is the panic-mode prompt. It's brutally efficient *because* it forces Claude to prioritize ruthlessly instead of giving you a polite, idealistic 12-hour plan you'll never finish — it tells you what to sacrifice.",
+      color: "bg-[#e8dff5]", 
+      accent: "text-purple-900"
+    },
+    {
+      id: 6,
+      title: "The \"Why Does This Even Matter\" Prompt",
+      prompt: "I find [boring topic] really hard to care about and it's killing my motivation to revise it. Give me 2-3 genuine reasons why it matters in real life, in industry, or in a future career — not generic 'it's important' fluff, actual concrete examples of where this shows up in the real world or in jobs. Then connect at least one sub-topic within it to something I'd find personally interesting.",
+      explanation: "Motivation and emotional relevance massively improve retention. Context turns a topic from \"stuff I have to memorize\" into \"stuff I'm slightly interested in,\" making revision sessions feel shorter and stick longer.",
+      color: "bg-[#ffdfd3]", 
+      accent: "text-orange-900"
+    },
+    {
+      id: 7,
+      title: "The Answer-Checker",
+      prompt: "Here's my answer to this question: [paste your full answer]. Don't rewrite it for me. Instead, act like a strict examiner: tell me what's factually wrong, what's missing that should be there for full marks, what's unnecessary or padding, and how you'd actually grade it out of the total marks with reasoning. Then tell me the 2-3 specific things I should add or fix to get full marks next time.",
+      explanation: "This builds your own writing and exam-answer instincts instead of replacing them. It trains you to think like the person grading your paper, so you write answers that hit what examiners are actually looking for.",
+      color: "bg-[#ffd6e0]", 
+      accent: "text-pink-900"
+    },
+    {
+      id: 8,
+      title: "The Formula/Theorem Translator",
+      prompt: "Take this formula/theorem: [paste it]. Break down what each term physically represents, not just what it means mathematically — like, if there's a variable for force or resistance, explain what that actually IS in the real world. Give me one real-life example or device where this formula is actually used. Then show me how to derive it from first principles, briefly, so that even if I forget the formula in an exam, I can rebuild it from logic.",
+      explanation: "For math, physics, and mechanical subjects. A huge chunk of exam panic comes from blanking on a formula; if you understand where it physically comes from, you can often reconstruct it under pressure.",
+      color: "bg-[#bde0fe]", 
+      accent: "text-blue-900"
+    },
+    {
+      id: 9,
+      title: "The Career-Mapping Prompt",
+      prompt: "I'm currently studying [your degree/field] in year [X] of my course, but I'm genuinely more interested in [different field, e.g. coding/data/design]. Give me a realistic roadmap to transition into that field by the time I graduate (or within [X years]) — specific skills to learn, in what order, roughly how long each stage should take, free or low-cost resources to learn from, and what I should be doing in parallel with my current degree rather than dropping out or ignoring it. Be honest about the tradeoffs and what's actually achievable on a student schedule.",
+      explanation: "If you're rethinking your major, this prompt turns vague anxiety into an actual structured plan with a timeline — which is far less stressful than just worrying about it in the background.",
+      color: "bg-[#d8f3dc]", 
+      accent: "text-green-900"
+    },
+    {
+      id: 10,
+      title: "The \"Make This Boring Thing a Story\" Prompt",
+      prompt: "Turn [historical event/scientific process/concept] into a short, dramatic narrative — like a scene from a movie or a story you'd tell a friend — while keeping every fact, date, and detail 100% accurate. Use tension, characters, and stakes where relevant to make it memorable, but don't sacrifice accuracy for drama. At the end, give me a quick bullet-point recap of the actual facts in case I need to write them in an exam.",
+      explanation: "Turning dry facts into narrative is one of the oldest memory tricks. A story sticks in your head in a way that a bullet-point list never will, and it makes revision sessions feel like less of a grind.",
+      color: "bg-[#fcf6bd]", 
+      accent: "text-yellow-900"
+    }
+  ]
+};
+
+// Helper to extract variables wrapped in [brackets] from prompt text
+const extractVariables = (promptText) => {
+  const regex = /\[([^\]]+)\]/g;
+  const matches = [];
+  let match;
+  while ((match = regex.exec(promptText)) !== null) {
+    if (!matches.includes(match[1])) {
+      matches.push(match[1]);
+    }
+  }
+  return matches;
+};
+
+// --- PCM to WAV conversion for Text-to-Speech ---
+function pcmToWav(pcmBase64, sampleRate = 24000) {
+  const binaryString = atob(pcmBase64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+  const pcm16 = new Int16Array(bytes.buffer);
+
+  const wavBuffer = new ArrayBuffer(44 + pcm16.length * 2);
+  const view = new DataView(wavBuffer);
+  
+  const writeString = (view, offset, string) => {
+    for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+  };
+
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + pcm16.length * 2, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, pcm16.length * 2, true);
+
+  let offset = 44;
+  for (let i = 0; i < pcm16.length; i++, offset += 2) {
+    view.setInt16(offset, pcm16[i], true);
+  }
+
+  const blob = new Blob([view], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+}
+
+// Refined App-Icon Style Custom Logos
+const GeminiIcon = ({ className }) => (
+  <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="26" fill="#ffffff" />
+    <defs>
+      <linearGradient id="geminiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#7E57C2" />
+        <stop offset="100%" stopColor="#2196F3" />
+      </linearGradient>
+    </defs>
+    <path d="M50 20 C50 42 42 50 20 50 C42 50 50 58 50 80 C50 58 58 50 80 50 C58 50 50 42 50 20 Z" fill="url(#geminiGrad)" />
+  </svg>
+);
+
+const ClaudeIcon = ({ className }) => (
+  <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="26" fill="#F4F0EB" />
+    <path d="M50 22 L53 45 L76 36 L58 50 L78 62 L55 58 L58 80 L50 62 L42 80 L45 58 L22 62 L42 50 L24 36 L47 45 Z" fill="#D96541" />
+  </svg>
+);
+
+const ChatGPTIcon = ({ className }) => (
+  <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="26" fill="#ffffff" />
+    <path d="M72.2,46.7c0.2-1.2,0.3-2.4,0.3-3.7c0-10.4-8.5-18.9-18.9-18.9c-4.8,0-9.2,1.8-12.6,4.8C38.6,23.3,31.7,20,24,20 c-10.4,0-18.9,8.5-18.9,18.9c0,1.2,0.1,2.4,0.3,3.7C2,45.4,0,50.4,0,56c0,10.4,8.5,18.9,18.9,18.9c4.8,0,9.2-1.8,12.6-4.8 c2.5,5.6,9.4,8.9,17.1,8.9c10.4,0,18.9-8.5,18.9-18.9c0-1.2-0.1-2.4-0.3-3.7C70,54.6,72,49.6,72,44C72,33.6,63.5,25.1,53.1,25.1 C48.3,25.1,43.9,26.9,40.5,29.9c-2.5-5.6-9.4-8.9-17.1-8.9C13,21,4.5,29.5,4.5,39.9c0,1.2,0.1,2.4,0.3,3.7 C1.4,46.4,0,51.1,0,56c0,10.4,8.5,18.9,18.9,18.9c4.8,0,9.2-1.8,12.6-4.8c2.5,5.6,9.4,8.9,17.1,8.9C59,79,67.5,70.5,67.5,60.1 c0-1.2-0.1-2.4-0.3-3.7C70.6,53.6,72,48.9,72,44C72,33.6,63.5,25.1,53.1,25.1z M53.1,30.6c7.4,0,13.4,6,13.4,13.4S60.5,57.4,53.1,57.4 S39.7,51.4,39.7,44S45.7,30.6,53.1,30.6z" fill="#000" transform="scale(0.65) translate(28, 28)"/>
+  </svg>
+);
+
+export default function App() {
+  const [copiedId, setCopiedId] = useState(null);
+  const [customPrompts, setCustomPrompts] = useState([]);
+  
+  // States for Gemini Text Generation
+  const [activePromptId, setActivePromptId] = useState(null);
+  const [promptInputs, setPromptInputs] = useState({});
+  const [apiResults, setApiResults] = useState({});
+  const [loadingIds, setLoadingIds] = useState({});
+  const [errorIds, setErrorIds] = useState({});
+
+  // States for Gemini Prompt Generation
+  const [customTopic, setCustomTopic] = useState("");
+  const [isGeneratingCustom, setIsGeneratingCustom] = useState(false);
+  const [customError, setCustomError] = useState(null);
+
+  // States for Gemini Text-to-Speech
+  const [playingAudioId, setPlayingAudioId] = useState(null);
+  const audioRef = useRef(null);
+
+  const allPrompts = [...customPrompts, ...PAGE_CONTENT.prompts];
+
+  const handleCopy = (text, id) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Copy failed', err);
+    }
+    document.body.removeChild(textArea);
+  };
+
+  const handleInputChange = (promptId, variable, value) => {
+    setPromptInputs(prev => ({
+      ...prev,
+      [`${promptId}-${variable}`]: value
+    }));
+  };
+
+  // Generic Retry Wrapper for API Calls
+  const fetchWithRetry = async (url, options, attempt = 0) => {
+    const delays = [1000, 2000, 4000, 8000, 16000];
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) throw new Error(`API returned ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      if (attempt < delays.length) {
+        await new Promise(r => setTimeout(r, delays[attempt]));
+        return fetchWithRetry(url, options, attempt + 1);
+      }
+      throw new Error("Failed to connect to Gemini after multiple attempts.");
+    }
+  };
+
+  // FEATURE 1: Generate AI Study Response
+  const generateResponse = async (promptObj) => {
+    setLoadingIds(prev => ({ ...prev, [promptObj.id]: true }));
+    setErrorIds(prev => ({ ...prev, [promptObj.id]: null }));
+    
+    let finalPrompt = promptObj.prompt;
+    const variables = extractVariables(promptObj.prompt);
+    variables.forEach(v => {
+      const userValue = promptInputs[`${promptObj.id}-${v}`];
+      if (userValue) finalPrompt = finalPrompt.replace(`[${v}]`, userValue);
+    });
+
+    const apiKey = ""; // API Key handled by execution environment
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    
+    try {
+      const data = await fetchWithRetry(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: finalPrompt }] }]
+        })
+      });
+      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
+      setApiResults(prev => ({ ...prev, [promptObj.id]: responseText }));
+    } catch (err) {
+      setErrorIds(prev => ({ ...prev, [promptObj.id]: err.message }));
+    } finally {
+      setLoadingIds(prev => ({ ...prev, [promptObj.id]: false }));
+    }
+  };
+
+  // FEATURE 2: Generate Custom Prompt Card via JSON Schema
+  const handleGenerateCustomPrompt = async () => {
+    if (!customTopic.trim()) return;
+    setIsGeneratingCustom(true);
+    setCustomError(null);
+
+    const apiKey = "";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    
+    const systemPrompt = `You are an expert prompt engineer for students. The user will tell you what they are struggling with. Your job is to create a highly optimized, structured study prompt template for them to use with AI. Use brackets like [topic] or [concept] for variables the user needs to fill in later.`;
+    const userPrompt = `Create a custom AI study prompt to help me with this problem: "${customTopic}"`;
+
+    try {
+      const data = await fetchWithRetry(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ parts: [{ text: userPrompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                title: { type: "STRING", description: "A catchy, short name for the prompt e.g., 'The Historical Timeline Builder'" },
+                prompt: { type: "STRING", description: "The actual prompt template with [bracketed] variables." },
+                explanation: { type: "STRING", description: "A brief 2 sentence explanation of why this specific prompt structure is effective for their problem." }
+              },
+              required: ["title", "prompt", "explanation"]
+            }
+          }
+        })
+      });
+      
+      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!responseText) throw new Error("Empty response");
+      
+      const customPromptObj = JSON.parse(responseText);
+      
+      const newPrompt = {
+        ...customPromptObj,
+        id: `custom-${Date.now()}`,
+        color: "bg-[#ffdfd3]", // Orange pastel
+        accent: "text-orange-900"
+      };
+
+      setCustomPrompts(prev => [newPrompt, ...prev]);
+      setCustomTopic("");
+    } catch (err) {
+      setCustomError(err.message);
+    } finally {
+      setIsGeneratingCustom(false);
+    }
+  };
+
+  // FEATURE 3: Text-to-Speech playback of AI results
+  const toggleTTS = async (text, id) => {
+    // If currently playing this card, stop it
+    if (playingAudioId === id) {
+      audioRef.current?.pause();
+      setPlayingAudioId(null);
+      return;
+    }
+    
+    // Stop any existing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    setPlayingAudioId(`loading-${id}`);
+    
+    const apiKey = "";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+    
+    try {
+      // Truncate text slightly if it's massive to avoid API limits on TTS
+      const textToRead = text.substring(0, 1500) + (text.length > 1500 ? "... The response has been shortened for audio." : "");
+      
+      const data = await fetchWithRetry(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: textToRead }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: "Aoede" } // A pleasant voice
+              }
+            }
+          }
+        })
+      });
+
+      const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+      if (!inlineData) throw new Error("No audio returned");
+
+      // Extract sample rate from mimeType (e.g. "audio/pcm;rate=24000")
+      const rateMatch = inlineData.mimeType.match(/rate=(\d+)/);
+      const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+
+      const wavUrl = pcmToWav(inlineData.data, sampleRate);
+      const audio = new Audio(wavUrl);
+      audioRef.current = audio;
+      
+      audio.onended = () => setPlayingAudioId(null);
+      audio.play();
+      
+      setPlayingAudioId(id);
+    } catch (err) {
+      console.error("TTS Error:", err);
+      alert("Failed to load audio playback.");
+      setPlayingAudioId(null);
+    }
+  };
+
+
+  return (
+    <>
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&display=swap');
+          
+          .font-heavy-serif { font-family: 'DM Serif Display', serif; }
+          .font-sans { font-family: 'Inter', sans-serif; }
+
+          @keyframes marquee {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-50%); }
+          }
+          .animate-marquee { animation: marquee 20s linear infinite; }
+          
+          /* Simple markdown rendering for LLM output */
+          .markdown-output h1, .markdown-output h2, .markdown-output h3 {
+             font-weight: bold; margin-top: 1rem; margin-bottom: 0.5rem; color: #111827;
+          }
+          .markdown-output p { margin-bottom: 0.75rem; }
+          .markdown-output ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+          .markdown-output ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+          .markdown-output strong { font-weight: 700; color: #111827; }
+        `}
+      </style>
+
+      <div className="min-h-screen bg-[#faf9f6] text-gray-900 font-sans selection:bg-pink-200">
+        
+        {/* Top Banner */}
+        <div className="bg-[#bde0fe] text-xs md:text-sm font-bold text-center py-2 border-b-2 border-gray-900 tracking-wide text-gray-900 uppercase flex items-center justify-center gap-2">
+          <Sparkles className="w-4 h-4 text-blue-700" /> Now powered by Gemini LLMs! Create custom prompts & listen to AI responses.
+        </div>
+
+        {/* Navigation */}
+        <nav className="border-b-2 border-gray-900 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="w-8 h-8 text-gray-900" />
+              <span className="font-heavy-serif text-3xl tracking-tighter mt-1">prompt.</span>
+            </div>
+            
+            <div className="hidden md:flex items-center gap-8 text-xs font-bold tracking-widest text-gray-500 uppercase">
+              <a href="#" className="hover:text-gray-900 transition-colors">Study Hacks</a>
+              <a href="#" className="hover:text-gray-900 transition-colors text-blue-600 flex items-center gap-1"><Sparkles className="w-3 h-3"/> AI Studio</a>
+            </div>
+
+            <button className="bg-white border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-gray-900 px-5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2">
+               Save
+            </button>
+          </div>
+        </nav>
+
+        {/* Hero Section */}
+        <header className="relative pt-16 md:pt-24 pb-16 overflow-hidden border-b-2 border-gray-900 bg-white">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+          
+          <div className="relative max-w-4xl mx-auto px-6 text-center z-10 flex flex-col items-center">
+            
+            <div className="relative inline-block mb-8 mt-4">
+              <div className="absolute -left-12 md:-left-24 -top-8 md:-top-10 -rotate-[15deg] shadow-[2px_4px_16px_rgba(0,0,0,0.12)] rounded-[26px] z-20 hover:scale-105 transition-transform duration-300">
+                <GeminiIcon className="w-[72px] h-[72px] md:w-24 md:h-24" />
+              </div>
+              <div className="absolute -right-12 md:-right-24 top-6 md:top-10 rotate-[12deg] shadow-[2px_4px_16px_rgba(0,0,0,0.12)] rounded-[26px] z-20 hover:scale-105 transition-transform duration-300">
+                 <ClaudeIcon className="w-16 h-16 md:w-[76px] md:h-[76px]" />
+              </div>
+
+              <div className="relative z-10 inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#d8f3dc] border-2 border-gray-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] text-gray-900 text-[10px] md:text-xs font-bold tracking-widest uppercase">
+                Where studying gets simple
+              </div>
+            </div>
+
+            <div className="relative w-full max-w-3xl">
+              <div className="absolute left-0 md:left-12 bottom-6 md:bottom-12 rotate-[8deg] shadow-[2px_4px_16px_rgba(0,0,0,0.12)] rounded-[26px] z-20 hidden sm:block hover:scale-105 transition-transform duration-300">
+                <ChatGPTIcon className="w-16 h-16 md:w-[72px] md:h-[72px]" />
+              </div>
+
+              <h1 className="text-[4.5rem] md:text-[6.5rem] font-heavy-serif tracking-[-0.04em] text-gray-900 leading-[0.85] mb-6">
+                <span className="block relative">
+                  <span className="relative z-10">the prompts</span>
+                  <span className="absolute bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 w-[80%] h-6 md:h-8 bg-[#ffd6e0] -z-10 -rotate-1"></span>
+                </span>
+                <span className="block mt-2">for students</span>
+              </h1>
+            </div>
+            
+            <p className="text-xl md:text-2xl text-gray-900 font-heavy-serif italic mb-8 max-w-2xl mx-auto tracking-tight">
+              {PAGE_CONTENT.subtitle}
+            </p>
+          </div>
+        </header>
+
+        {/* 🌟 NEW GEMINI FEATURE: Custom Prompt Generator 🌟 */}
+        <section className="bg-gradient-to-br from-indigo-900 to-purple-900 py-16 px-6 border-b-2 border-gray-900 relative overflow-hidden">
+           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIi8+PC9zdmc+')] [background-size:24px_24px]"></div>
+           <div className="max-w-3xl mx-auto relative z-10 text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-sm border border-white/30 text-[10px] font-bold tracking-widest uppercase mb-6">
+                <Wand2 className="w-3.5 h-3.5 text-yellow-300" /> Prompt Studio
+              </div>
+              <h2 className="text-3xl md:text-5xl font-heavy-serif text-white mb-4 tracking-tight">
+                Struggling with a specific topic?
+              </h2>
+              <p className="text-indigo-200 font-medium mb-8 max-w-xl mx-auto text-sm md:text-base">
+                Tell Gemini what you're trying to study, and it will engineer a custom, perfectly structured prompt card tailored specifically for your needs.
+              </p>
+              
+              <div className="bg-white p-2 rounded-2xl md:rounded-full flex flex-col md:flex-row gap-2 shadow-2xl border-2 border-indigo-950">
+                 <input 
+                   type="text"
+                   value={customTopic}
+                   onChange={e => setCustomTopic(e.target.value)}
+                   placeholder="e.g. 'I need to memorize organic chemistry functional groups'"
+                   className="flex-1 px-6 py-4 bg-transparent outline-none font-medium text-gray-900 placeholder:text-gray-400"
+                 />
+                 <button 
+                   onClick={handleGenerateCustomPrompt}
+                   disabled={isGeneratingCustom || !customTopic.trim()}
+                   className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-8 py-4 rounded-xl md:rounded-full font-bold uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+                 >
+                   {isGeneratingCustom ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                   Generate Prompt
+                 </button>
+              </div>
+              {customError && <p className="text-red-300 mt-4 text-sm font-bold bg-red-900/50 inline-block px-4 py-2 rounded-lg">{customError}</p>}
+           </div>
+        </section>
+
+        {/* Marquee Banner */}
+        <div className="bg-[#ffd6e0] py-3 overflow-hidden border-b-2 border-gray-900 flex whitespace-nowrap">
+          <div className="animate-marquee inline-block font-bold tracking-widest uppercase text-gray-900 text-xs">
+            {Array(10).fill("STUDY SMARTER NOT HARDER • AI FOR STUDENTS • ").map((text, i) => (
+              <span key={i} className="mx-4">{text}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Prompts Grid */}
+        <main className="max-w-7xl mx-auto px-6 py-20 pb-32">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 items-start">
+            {allPrompts.map((item, index) => {
+              const isActive = activePromptId === item.id;
+              const variables = extractVariables(item.prompt);
+              const hasResult = !!apiResults[item.id];
+              const isLoading = loadingIds[item.id];
+              const error = errorIds[item.id];
+
+              const isCustom = String(item.id).startsWith('custom');
+              const displayId = isCustom ? `✨ New` : String(item.id).padStart(2, '0');
+
+              return (
+                <div 
+                  key={item.id} 
+                  className={`bg-white rounded-3xl border-2 border-gray-900 flex flex-col shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden transition-all duration-300 ${isActive ? 'ring-4 ring-indigo-400 ring-offset-2' : 'hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]'}`}
+                >
+                  {/* Card Header */}
+                  <div className={`${item.color} border-b-2 border-gray-900 px-6 py-4 flex justify-between items-center relative overflow-hidden`}>
+                    <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    <span className="relative z-10 font-bold text-gray-900 bg-white px-3 py-1 rounded-full text-[10px] uppercase tracking-widest border-2 border-gray-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5">
+                      {isCustom ? <Wand2 className="w-3 h-3 text-orange-600"/> : null} 
+                      {isCustom ? 'Custom Prompt' : `Prompt ${item.id}`}
+                    </span>
+                    <span className="relative z-10 font-heavy-serif text-3xl text-gray-900/20 select-none pointer-events-none">
+                      {displayId}
+                    </span>
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="p-6 flex-grow flex flex-col relative">
+                    <h3 className={`text-[1.75rem] font-heavy-serif text-gray-900 leading-[1.1] tracking-tight mb-6 mt-2`}>
+                      {item.title.replace(/^\d+\.\s*/, '')}
+                    </h3>
+
+                    {/* The Prompt Box */}
+                    <div className="bg-[#faf9f6] rounded-xl p-5 mb-6 border-2 border-dashed border-gray-300 relative group">
+                      <p className="text-gray-700 text-sm leading-relaxed font-medium pb-12">
+                        "{item.prompt}"
+                      </p>
+                      
+                      <div className="absolute bottom-3 right-3 flex gap-2">
+                        <button
+                          onClick={() => handleCopy(item.prompt, item.id)}
+                          className="bg-white border-2 border-gray-900 text-gray-900 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-gray-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-1.5"
+                          title="Copy prompt text"
+                        >
+                          {copiedId === item.id ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                        
+                        <button
+                          onClick={() => setActivePromptId(isActive ? null : item.id)}
+                          className={`${isActive ? 'bg-gray-900 text-white shadow-none translate-y-[2px]' : 'bg-indigo-100 text-indigo-900 border-2 border-indigo-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'} px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-200 active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-1.5`}
+                        >
+                           {isActive ? <><X className="w-3.5 h-3.5"/> Close</> : <><Sparkles className="w-3.5 h-3.5"/> Run It</>}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* ✨ AI Runner Interface */}
+                    {isActive && (
+                      <div className="mb-6 p-5 bg-indigo-50 border-2 border-indigo-900 rounded-xl animate-in slide-in-from-top-2 fade-in duration-200">
+                        
+                        {/* Variables Input */}
+                        {variables.length > 0 ? (
+                          <>
+                            <h4 className="font-bold text-indigo-900 text-xs flex items-center gap-2 mb-4 uppercase tracking-widest">
+                              <Sparkles className="w-4 h-4 text-indigo-600" /> Fill Variables:
+                            </h4>
+                            <div className="space-y-3 mb-4">
+                              {variables.map((variable, idx) => (
+                                <div key={idx} className="flex flex-col gap-1">
+                                  <label className="text-[9px] font-bold uppercase tracking-widest text-indigo-800">
+                                    {variable}
+                                  </label>
+                                  <textarea 
+                                    placeholder={`Enter ${variable}...`}
+                                    value={promptInputs[`${item.id}-${variable}`] || ''}
+                                    onChange={(e) => handleInputChange(item.id, variable, e.target.value)}
+                                    className="w-full p-2.5 text-sm rounded-lg border-2 border-indigo-900 shadow-[2px_2px_0px_0px_rgba(49,46,129,1)] focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white resize-y min-h-[50px]"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-xs text-indigo-800 font-medium mb-4 italic">This prompt requires no variables. Ready to run!</p>
+                        )}
+
+                        <button 
+                          onClick={() => generateResponse(item)}
+                          disabled={isLoading}
+                          className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold uppercase tracking-wider text-xs py-3 rounded-xl border-2 border-indigo-900 shadow-[3px_3px_0px_0px_rgba(49,46,129,1)] active:translate-y-[2px] active:shadow-none transition-all flex items-center justify-center gap-2"
+                        >
+                          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          {isLoading ? 'Thinking...' : 'Generate AI Response'}
+                        </button>
+
+                        {error && (
+                          <div className="mt-4 p-3 bg-red-100 border-2 border-red-900 text-red-900 text-xs font-bold rounded-lg">
+                            Error: {error}
+                          </div>
+                        )}
+
+                        {/* 🌟 NEW FEATURE: AI Results with TTS */}
+                        {hasResult && !isLoading && (
+                          <div className="mt-6 border-t-2 border-indigo-200 pt-5">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-bold text-gray-900 text-[10px] flex items-center gap-1.5 uppercase tracking-widest">
+                                <Check className="w-3.5 h-3.5 text-green-600" /> AI Response
+                              </h4>
+                              
+                              {/* 🎧 TTS Audio Button */}
+                              <button
+                                onClick={() => toggleTTS(apiResults[item.id], item.id)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-[10px] font-bold uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:shadow-none transition-all
+                                  ${playingAudioId === item.id 
+                                    ? 'bg-red-100 border-red-900 text-red-900' 
+                                    : 'bg-white border-gray-900 text-gray-900 hover:bg-gray-100'}`}
+                              >
+                                {playingAudioId === `loading-${item.id}` ? (
+                                   <><Loader2 className="w-3.5 h-3.5 animate-spin"/> Loading Audio...</>
+                                ) : playingAudioId === item.id ? (
+                                   <><VolumeX className="w-3.5 h-3.5"/> Stop Audio</>
+                                ) : (
+                                   <><Volume2 className="w-3.5 h-3.5"/> Listen 🎧</>
+                                )}
+                              </button>
+                            </div>
+                            
+                            <div className="bg-white p-5 rounded-lg border-2 border-indigo-100 text-sm text-gray-800 max-h-[350px] overflow-y-auto markdown-output whitespace-pre-wrap leading-relaxed">
+                              {apiResults[item.id]}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Explanation */}
+                    <div className="mt-auto pt-5 border-t border-gray-100">
+                      <h4 className={`font-bold text-[10px] uppercase tracking-widest mb-2 ${item.accent}`}>Why It Works</h4>
+                      <p className="text-gray-600 text-[13px] leading-relaxed font-medium">
+                        {item.explanation.replace('Why it works: ', '')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </main>
+      </div>
+    </>
+  );
+}
